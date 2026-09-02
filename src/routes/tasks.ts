@@ -5,6 +5,7 @@ import {
   idParamsSchema,
   taskCommentParamsSchema,
   taskIdParamsSchema,
+  taskListQuerySchema,
   updateCommentSchema,
   updateTaskSchema,
 } from '../domain/schemas.js';
@@ -15,7 +16,10 @@ import type { TaskService } from '../services/task-service.js';
 export const tasksRouter = (tasks: TaskService, comments: CommentService): Router => {
   const router = Router();
 
-  router.get('/', (_request, response) => response.json(tasks.list()));
+  router.get('/', (request, response) => {
+    const query = taskListQuerySchema.parse(request.query);
+    response.json(tasks.list(query.search));
+  });
   router.post('/', validateBody(createTaskSchema), (request, response) => response.status(201).json(tasks.create(request.body)));
   router.get<{ id: string }>('/:id', validateParams(idParamsSchema), (request, response) => response.json(tasks.get(request.params.id)));
   router.patch<{ id: string }>('/:id', validateParams(idParamsSchema), validateBody(updateTaskSchema), (request, response) => response.json(tasks.update(request.params.id, request.body)));

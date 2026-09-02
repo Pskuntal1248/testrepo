@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Added
 
 - Normalized, unique labels on task create and update operations.
+- Case-insensitive task search across names and descriptions.
 
 ## [1.0.0] - 2026-09-03
 
