@@ -19,7 +19,7 @@ export const openApiDocument = {
     '/users/{id}': itemPaths('Users', 'User'),
     '/projects': collectionPaths('Projects', 'Project'),
     '/projects/{id}': itemPaths('Projects', 'Project'),
-    '/tasks': collectionPaths('Tasks', 'Task'),
+    '/tasks': collectionPaths('Tasks', 'Task', [{ $ref: '#/components/parameters/TaskSearch' }]),
     '/tasks/{id}': itemPaths('Tasks', 'Task'),
     '/tasks/{taskId}/comments': {
       get: operation('Comments', 'List task comments', 'CommentList', true, [{ $ref: '#/components/parameters/TaskId' }]),
@@ -39,6 +39,13 @@ export const openApiDocument = {
       Id: { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
       TaskId: { name: 'taskId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
       CommentId: { name: 'commentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+      TaskSearch: {
+        name: 'search',
+        in: 'query',
+        required: false,
+        description: 'Case-insensitive substring matched against task name and description.',
+        schema: { type: 'string', minLength: 1, maxLength: 200 },
+      },
     },
     schemas: {
       User: entitySchema({ email: { type: 'string', format: 'email' }, displayName: { type: 'string' }, active: { type: 'boolean' } }, ['email', 'displayName', 'active']),
@@ -101,9 +108,9 @@ function deleteOperation(tag: string, summary: string, parameters: unknown[]) {
   return { tags: [tag], summary, parameters, responses: { 204: { description: 'Deleted' }, 401: { description: 'Unauthorized' }, 404: { description: 'Not found' } } };
 }
 
-function collectionPaths(tag: string, schema: string) {
+function collectionPaths(tag: string, schema: string, parameters?: unknown[]) {
   return {
-    get: operation(tag, `List ${tag.toLowerCase()}`, schema, true),
+    get: operation(tag, `List ${tag.toLowerCase()}`, schema, true, parameters),
     post: operation(tag, `Create ${schema.toLowerCase()}`, schema, false, undefined, `Create${schema}`, 201),
   };
 }

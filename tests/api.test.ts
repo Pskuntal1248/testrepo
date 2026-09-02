@@ -126,6 +126,34 @@ describe('TaskFlow API v1', () => {
     expect(tooManyLabels.status).toBe(400);
   });
 
+  it('searches task names and descriptions with a validated case-insensitive substring', async () => {
+    const project = await createProject(app);
+    const endpoint = '/api/v1/tasks';
+    const createTask = (name: string, description: string) =>
+      api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, name, description });
+
+    await createTask('Payment retry logic', 'Handle transient failures');
+    await createTask('Audit webhooks', 'Investigate PAYMENT provider callbacks');
+    await createTask('Refresh profile', 'Update the avatar editor');
+
+    const matches = await api(app)
+      .get(endpoint)
+      .set('Authorization', auth)
+      .query({ search: '  PaYmEnT  ' });
+    const noMatches = await api(app).get(endpoint).set('Authorization', auth).query({ search: 'invoice' });
+    const emptySearch = await api(app).get(endpoint).set('Authorization', auth).query({ search: '   ' });
+    const unknownQuery = await api(app).get(endpoint).set('Authorization', auth).query({ sort: 'name' });
+
+    expect(matches.status).toBe(200);
+    expect(matches.body.map((task: { name: string }) => task.name)).toEqual([
+      'Payment retry logic',
+      'Audit webhooks',
+    ]);
+    expect(noMatches.body).toEqual([]);
+    expect(emptySearch.status).toBe(400);
+    expect(unknownQuery.status).toBe(400);
+  });
+
   it('validates request bodies and rejects unknown fields', async () => {
     const invalidEmail = await createUser(app, { email: 'not-an-email' });
     const unknownField = await api(app).post('/api/v1/projects').set('Authorization', auth).send({ name: 'A', labels: [] });

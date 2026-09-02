@@ -7,8 +7,14 @@ import type { Repositories } from '../repositories/repositories.js';
 export class TaskService {
   constructor(private readonly repositories: Repositories) {}
 
-  list(): Task[] {
-    return this.repositories.tasks.findAll();
+  list(search?: string): Task[] {
+    const tasks = this.repositories.tasks.findAll();
+    if (search === undefined) return tasks;
+
+    const term = search.toLowerCase();
+    return tasks.filter((task) =>
+      task.name.toLowerCase().includes(term) || task.description.toLowerCase().includes(term),
+    );
   }
 
   get(id: string): Task {
