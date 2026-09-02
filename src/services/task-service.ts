@@ -1,3 +1,4 @@
+import { defaultTaskPipeline } from '../lib/task-processor.js';
 import type { Task, TaskListResult } from '../domain/models.js';
 import type { CreateTaskInput, TaskListQuery, UpdateTaskInput } from '../domain/schemas.js';
 import { badRequest, notFound } from '../lib/errors.js';
@@ -40,12 +41,14 @@ export class TaskService {
     this.validateProject(input.projectId);
     this.validateAssignee(input.assigneeId);
     const timestamp = now();
-    return this.repositories.tasks.create({
+    const created = this.repositories.tasks.create({
       id: createId(),
       ...input,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
+    void defaultTaskPipeline.dispatch({ taskId: created.id, eventType: 'task:created', timestamp });
+    return created;
   }
 
   update(id: string, input: UpdateTaskInput): Task {
@@ -54,6 +57,7 @@ export class TaskService {
     if (input.assigneeId !== undefined) this.validateAssignee(input.assigneeId);
     const updated: Task = { ...existing, ...input, updatedAt: now() };
     this.repositories.tasks.update(id, updated);
+    void defaultTaskPipeline.dispatch({ taskId: id, eventType: 'task:updated', timestamp: updated.updatedAt });
     return updated;
   }
 
@@ -63,6 +67,7 @@ export class TaskService {
       if (comment.taskId === id) this.repositories.comments.delete(comment.id);
     }
     this.repositories.tasks.delete(id);
+    void defaultTaskPipeline.dispatch({ taskId: id, eventType: 'task:deleted', timestamp: now() });
   }
 
   private validateProject(projectId: string): void {
