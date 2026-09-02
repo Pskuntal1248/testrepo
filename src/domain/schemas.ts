@@ -29,6 +29,17 @@ export const updateProjectSchema = createProjectSchema.partial().strict().refine
   'At least one field is required',
 );
 
+const taskLabelSchema = z.string()
+  .trim()
+  .min(1)
+  .max(30)
+  .transform((value) => value.toLowerCase())
+  .pipe(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Labels must contain lowercase letters, numbers, and single hyphens'));
+
+const taskLabelsSchema = z.array(taskLabelSchema)
+  .max(10)
+  .refine((labels) => new Set(labels).size === labels.length, 'Labels must be unique');
+
 export const createTaskSchema = z.object({
   projectId: z.string().uuid(),
   name: z.string().trim().min(1).max(200),
@@ -36,6 +47,7 @@ export const createTaskSchema = z.object({
   status: z.enum(TASK_STATUSES).default('todo'),
   priority: z.enum(TASK_PRIORITIES).default('medium'),
   assigneeId: z.string().uuid().nullable().default(null),
+  labels: taskLabelsSchema.default([]),
 }).strict();
 
 export const updateTaskSchema = createTaskSchema.partial().strict().refine(

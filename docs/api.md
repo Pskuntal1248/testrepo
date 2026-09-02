@@ -54,7 +54,7 @@ Create a task using the returned project and user IDs:
 ```bash
 curl -u admin:taskflow -X POST http://localhost:3000/api/v1/tasks \
   -H 'Content-Type: application/json' \
-  -d '{"projectId":"PROJECT_UUID","name":"Publish release notes","priority":"high","assigneeId":"USER_UUID"}'
+  -d '{"projectId":"PROJECT_UUID","name":"Publish release notes","priority":"high","assigneeId":"USER_UUID","labels":["Release","API-Docs"]}'
 ```
 
 A v1 task response includes `name`:
@@ -68,6 +68,7 @@ A v1 task response includes `name`:
   "status": "todo",
   "priority": "high",
   "assigneeId": "USER_UUID",
+  "labels": ["release", "api-docs"],
   "createdAt": "2026-09-03T12:00:00.000Z",
   "updatedAt": "2026-09-03T12:00:00.000Z"
 }
@@ -80,6 +81,10 @@ curl -u admin:taskflow -X POST http://localhost:3000/api/v1/tasks/TASK_UUID/comm
   -H 'Content-Type: application/json' \
   -d '{"authorId":"USER_UUID","body":"Ready for review."}'
 ```
+
+## Task labels
+
+Tasks default to an empty `labels` array. Create and update requests may supply up to 10 labels. Each label is trimmed, normalized to lowercase, and must be 1–30 characters using alphanumeric segments separated by single hyphens, such as `api`, `priority-1`, or `ready-for-review`. Labels must be unique after normalization; sending both `Backend` and `backend` is invalid. Updating `labels` replaces the complete array, and sending `[]` removes all labels.
 
 ## Relationship rules
 
