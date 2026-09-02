@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - Task list responses now use a `{ data, pagination }` envelope instead of a plain array.
+- Internal task queries now use maintained project, status, priority, and assignee indexes.
 
 ## [1.0.0] - 2026-09-03
 
