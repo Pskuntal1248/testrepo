@@ -62,6 +62,7 @@ describe('TaskFlow API v1', () => {
       name: 'Publish release notes',
       priority: 'high',
       assigneeId: user.body.id,
+      labels: ['Release', 'API-Docs'],
     });
 
     expect(user.status).toBe(201);
@@ -73,6 +74,7 @@ describe('TaskFlow API v1', () => {
       status: 'todo',
       priority: 'high',
       assigneeId: user.body.id,
+      labels: ['release', 'api-docs'],
     });
     expect(task.body).not.toHaveProperty('title');
 
@@ -88,10 +90,40 @@ describe('TaskFlow API v1', () => {
     });
     expect(comment.status).toBe(201);
 
-    const updated = await api(app).patch(`/api/v1/tasks/${task.body.id}`).set('Authorization', auth).send({ status: 'done' });
+    const updated = await api(app).patch(`/api/v1/tasks/${task.body.id}`).set('Authorization', auth).send({
+      status: 'done',
+      labels: ['Documentation'],
+    });
     const comments = await api(app).get(`/api/v1/tasks/${task.body.id}/comments`).set('Authorization', auth);
     expect(updated.body.status).toBe('done');
+    expect(updated.body.labels).toEqual(['documentation']);
     expect(comments.body).toEqual([expect.objectContaining({ body: 'Ready for review.' })]);
+  });
+
+  it('defaults labels and validates normalized label uniqueness, syntax, and count', async () => {
+    const project = await createProject(app);
+    const endpoint = '/api/v1/tasks';
+    const baseTask = { projectId: project.body.id, name: 'Label validation' };
+
+    const withoutLabels = await api(app).post(endpoint).set('Authorization', auth).send(baseTask);
+    const duplicateLabels = await api(app).post(endpoint).set('Authorization', auth).send({
+      ...baseTask,
+      labels: ['Backend', 'backend'],
+    });
+    const invalidLabel = await api(app).post(endpoint).set('Authorization', auth).send({
+      ...baseTask,
+      labels: ['not allowed!'],
+    });
+    const tooManyLabels = await api(app).post(endpoint).set('Authorization', auth).send({
+      ...baseTask,
+      labels: Array.from({ length: 11 }, (_, index) => `label-${index}`),
+    });
+
+    expect(withoutLabels.status).toBe(201);
+    expect(withoutLabels.body.labels).toEqual([]);
+    expect(duplicateLabels.status).toBe(400);
+    expect(invalidLabel.status).toBe(400);
+    expect(tooManyLabels.status).toBe(400);
   });
 
   it('validates request bodies and rejects unknown fields', async () => {
