@@ -34,6 +34,16 @@ export interface Task {
   updatedAt: string;
 }
 
+export interface TaskListResult {
+  data: Task[];
+  pagination: {
+    page: number;
+    size: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface Comment {
   id: string;
   taskId: string;
