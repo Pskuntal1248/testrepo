@@ -50,7 +50,7 @@ export const openApiDocument = {
         name: 'search',
         in: 'query',
         required: false,
-        description: 'Case-insensitive substring matched against task name and description.',
+        description: 'Case-insensitive substring matched against task title and description.',
         schema: { type: 'string', minLength: 1, maxLength: 200 },
       },
       TaskStatusFilter: {
@@ -96,7 +96,7 @@ export const openApiDocument = {
       Project: entitySchema({ name: { type: 'string' }, description: { type: 'string' } }, ['name', 'description']),
       CreateProject: objectSchema({ name: { type: 'string' }, description: { type: 'string', default: '' } }, ['name']),
       UpdateProject: objectSchema({ name: { type: 'string' }, description: { type: 'string' } }),
-      Task: entitySchema(taskProperties(), ['projectId', 'name', 'description', 'status', 'priority', 'assigneeId', 'labels']),
+      Task: entitySchema(taskProperties(), ['projectId', 'title', 'description', 'status', 'priority', 'assigneeId', 'labels']),
       TaskPage: objectSchema({
         data: { type: 'array', items: { $ref: '#/components/schemas/Task' } },
         pagination: objectSchema({
@@ -106,7 +106,7 @@ export const openApiDocument = {
           totalPages: { type: 'integer', minimum: 0 },
         }, ['page', 'size', 'total', 'totalPages']),
       }, ['data', 'pagination']),
-      CreateTask: objectSchema(taskProperties(true), ['projectId', 'name']),
+      CreateTask: objectSchema(taskProperties(true), ['projectId', 'title']),
       UpdateTask: objectSchema(taskProperties()),
       Comment: entitySchema({ taskId: { type: 'string', format: 'uuid' }, authorId: { type: 'string', format: 'uuid' }, body: { type: 'string' } }, ['taskId', 'authorId', 'body']),
       CreateComment: objectSchema({ authorId: { type: 'string', format: 'uuid' }, body: { type: 'string' } }, ['authorId', 'body']),
