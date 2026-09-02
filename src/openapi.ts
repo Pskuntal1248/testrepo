@@ -47,7 +47,7 @@ export const openApiDocument = {
       Project: entitySchema({ name: { type: 'string' }, description: { type: 'string' } }, ['name', 'description']),
       CreateProject: objectSchema({ name: { type: 'string' }, description: { type: 'string', default: '' } }, ['name']),
       UpdateProject: objectSchema({ name: { type: 'string' }, description: { type: 'string' } }),
-      Task: entitySchema(taskProperties(), ['projectId', 'name', 'description', 'status', 'priority', 'assigneeId']),
+      Task: entitySchema(taskProperties(), ['projectId', 'name', 'description', 'status', 'priority', 'assigneeId', 'labels']),
       CreateTask: objectSchema(taskProperties(true), ['projectId', 'name']),
       UpdateTask: objectSchema(taskProperties()),
       Comment: entitySchema({ taskId: { type: 'string', format: 'uuid' }, authorId: { type: 'string', format: 'uuid' }, body: { type: 'string' } }, ['taskId', 'authorId', 'body']),
@@ -74,6 +74,13 @@ function taskProperties(withDefaults = false) {
     status: { type: 'string', enum: ['todo', 'in_progress', 'done'], ...(withDefaults ? { default: 'todo' } : {}) },
     priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], ...(withDefaults ? { default: 'medium' } : {}) },
     assigneeId: { type: ['string', 'null'], format: 'uuid', ...(withDefaults ? { default: null } : {}) },
+    labels: {
+      type: 'array',
+      maxItems: 10,
+      uniqueItems: true,
+      items: { type: 'string', minLength: 1, maxLength: 30, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+      ...(withDefaults ? { default: [] } : {}),
+    },
   };
 }
 
