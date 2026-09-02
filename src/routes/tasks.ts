@@ -18,7 +18,7 @@ export const tasksRouter = (tasks: TaskService, comments: CommentService): Route
 
   router.get('/', (request, response) => {
     const query = taskListQuerySchema.parse(request.query);
-    response.json(tasks.list(query.search));
+    response.json(tasks.list(query));
   });
   router.post('/', validateBody(createTaskSchema), (request, response) => response.status(201).json(tasks.create(request.body)));
   router.get<{ id: string }>('/:id', validateParams(idParamsSchema), (request, response) => response.json(tasks.get(request.params.id)));

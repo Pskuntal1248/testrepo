@@ -57,6 +57,9 @@ export const updateTaskSchema = createTaskSchema.partial().strict().refine(
 
 export const taskListQuerySchema = z.object({
   search: z.string().trim().min(1).max(200).optional(),
+  status: z.enum(TASK_STATUSES).optional(),
+  priority: z.enum(TASK_PRIORITIES).optional(),
+  assignee: z.string().uuid().optional(),
 }).strict();
 
 export const createCommentSchema = z.object({
@@ -74,5 +77,6 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = Partial<CreateProjectInput>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = Partial<CreateTaskInput>;
+export type TaskListQuery = z.infer<typeof taskListQuerySchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type UpdateCommentInput = z.infer<typeof updateCommentSchema>;

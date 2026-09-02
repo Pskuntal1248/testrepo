@@ -19,7 +19,12 @@ export const openApiDocument = {
     '/users/{id}': itemPaths('Users', 'User'),
     '/projects': collectionPaths('Projects', 'Project'),
     '/projects/{id}': itemPaths('Projects', 'Project'),
-    '/tasks': collectionPaths('Tasks', 'Task', [{ $ref: '#/components/parameters/TaskSearch' }]),
+    '/tasks': collectionPaths('Tasks', 'Task', [
+      { $ref: '#/components/parameters/TaskSearch' },
+      { $ref: '#/components/parameters/TaskStatusFilter' },
+      { $ref: '#/components/parameters/TaskPriorityFilter' },
+      { $ref: '#/components/parameters/TaskAssigneeFilter' },
+    ]),
     '/tasks/{id}': itemPaths('Tasks', 'Task'),
     '/tasks/{taskId}/comments': {
       get: operation('Comments', 'List task comments', 'CommentList', true, [{ $ref: '#/components/parameters/TaskId' }]),
@@ -45,6 +50,27 @@ export const openApiDocument = {
         required: false,
         description: 'Case-insensitive substring matched against task name and description.',
         schema: { type: 'string', minLength: 1, maxLength: 200 },
+      },
+      TaskStatusFilter: {
+        name: 'status',
+        in: 'query',
+        required: false,
+        description: 'Return tasks with this status.',
+        schema: { type: 'string', enum: ['todo', 'in_progress', 'done'] },
+      },
+      TaskPriorityFilter: {
+        name: 'priority',
+        in: 'query',
+        required: false,
+        description: 'Return tasks with this priority.',
+        schema: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+      },
+      TaskAssigneeFilter: {
+        name: 'assignee',
+        in: 'query',
+        required: false,
+        description: 'Return tasks assigned to this user ID.',
+        schema: { type: 'string', format: 'uuid' },
       },
     },
     schemas: {
