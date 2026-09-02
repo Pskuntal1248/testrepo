@@ -24,12 +24,22 @@ Successful collection reads return plain arrays. Errors use a stable envelope:
 | GET, PATCH, DELETE | `/users/:id` | Read, update, or delete a user |
 | GET, POST | `/projects` | List or create projects |
 | GET, PATCH, DELETE | `/projects/:id` | Read, update, or delete a project |
-| GET, POST | `/tasks` | List or create tasks |
+| GET, POST | `/tasks` | List or create tasks; GET accepts optional `search` |
 | GET, PATCH, DELETE | `/tasks/:id` | Read, update, or delete a task |
 | GET, POST | `/tasks/:taskId/comments` | List or create comments |
 | GET, PATCH, DELETE | `/tasks/:taskId/comments/:commentId` | Read, update, or delete a comment |
 | GET | `/statuses` | List `todo`, `in_progress`, and `done` |
 | GET | `/priorities` | List `low`, `medium`, `high`, and `urgent` |
+
+## Task search
+
+Use `GET /tasks?search=payment` to return tasks whose `name` or `description` contains the supplied text. Matching is case-insensitive, surrounding query whitespace is ignored, and results remain a plain JSON array in repository order. The search term must contain 1–200 characters after trimming. Other query parameters are rejected.
+
+```bash
+curl -u admin:taskflow 'http://localhost:3000/api/v1/tasks?search=payment'
+```
+
+Omitting `search` returns every task. A valid search with no matches returns `[]`.
 
 ## Example workflow
 
