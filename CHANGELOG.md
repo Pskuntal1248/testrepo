@@ -16,6 +16,10 @@ All notable changes to this project are documented in this file. The format is b
 - Task list responses now use a `{ data, pagination }` envelope instead of a plain array.
 - Internal task queries now use maintained project, status, priority, and assignee indexes.
 
+### Fixed
+
+- Active users with an empty display name can now be assigned to tasks.
+
 ## [1.0.0] - 2026-09-03
 
 ### Added

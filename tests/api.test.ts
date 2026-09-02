@@ -262,6 +262,21 @@ describe('TaskFlow API v1', () => {
     expect(badAssignee.body.error.message).toContain('active user');
   });
 
+  it('allows assigning an active user with an empty display name', async () => {
+    const project = await createProject(app);
+    const activeUser = await createUser(app, { displayName: '' });
+
+    const task = await api(app).post('/api/v1/tasks').set('Authorization', auth).send({
+      projectId: project.body.id,
+      name: 'Assignment without display name',
+      assigneeId: activeUser.body.id,
+    });
+
+    expect(activeUser.status).toBe(201);
+    expect(task.status).toBe(201);
+    expect(task.body.assigneeId).toBe(activeUser.body.id);
+  });
+
   it('prevents duplicate emails and deletion of referenced records', async () => {
     const user = await createUser(app);
     const duplicate = await createUser(app, { displayName: 'Someone Else' });
