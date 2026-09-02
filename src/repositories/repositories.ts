@@ -1,16 +1,17 @@
-import type { Comment, Project, Task, User } from '../domain/models.js';
+import type { Comment, Project, User } from '../domain/models.js';
 import { InMemoryRepository } from './in-memory-repository.js';
+import { TaskRepository } from './task-repository.js';
 
 export interface Repositories {
   users: InMemoryRepository<User>;
   projects: InMemoryRepository<Project>;
-  tasks: InMemoryRepository<Task>;
+  tasks: TaskRepository;
   comments: InMemoryRepository<Comment>;
 }
 
 export const createRepositories = (): Repositories => ({
   users: new InMemoryRepository<User>(),
   projects: new InMemoryRepository<Project>(),
-  tasks: new InMemoryRepository<Task>(),
+  tasks: new TaskRepository(),
   comments: new InMemoryRepository<Comment>(),
 });
