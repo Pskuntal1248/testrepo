@@ -55,6 +55,10 @@ export const updateTaskSchema = createTaskSchema.partial().strict().refine(
   'At least one field is required',
 );
 
+export const taskListQuerySchema = z.object({
+  search: z.string().trim().min(1).max(200).optional(),
+}).strict();
+
 export const createCommentSchema = z.object({
   authorId: z.string().uuid(),
   body: z.string().trim().min(1).max(5000),
