@@ -81,8 +81,8 @@ describe('TaskFlow API v1', () => {
     const fetched = await api(app).get(`/api/v1/tasks/${task.body.id}`).set('Authorization', auth);
     const listed = await api(app).get('/api/v1/tasks').set('Authorization', auth);
     expect(fetched.body.name).toBe('Publish release notes');
-    expect(Array.isArray(listed.body)).toBe(true);
-    expect(listed.body).toHaveLength(1);
+    expect(listed.body.data).toHaveLength(1);
+    expect(listed.body.pagination).toEqual({ page: 1, size: 20, total: 1, totalPages: 1 });
 
     const comment = await api(app).post(`/api/v1/tasks/${task.body.id}/comments`).set('Authorization', auth).send({
       authorId: user.body.id,
@@ -145,11 +145,15 @@ describe('TaskFlow API v1', () => {
     const unknownQuery = await api(app).get(endpoint).set('Authorization', auth).query({ sort: 'name' });
 
     expect(matches.status).toBe(200);
-    expect(matches.body.map((task: { name: string }) => task.name)).toEqual([
+    expect(matches.body.data.map((task: { name: string }) => task.name)).toEqual([
       'Payment retry logic',
       'Audit webhooks',
     ]);
-    expect(noMatches.body).toEqual([]);
+    expect(matches.body.pagination.total).toBe(2);
+    expect(noMatches.body).toEqual({
+      data: [],
+      pagination: { page: 1, size: 20, total: 0, totalPages: 0 },
+    });
     expect(emptySearch.status).toBe(400);
     expect(unknownQuery.status).toBe(400);
   });
@@ -176,10 +180,11 @@ describe('TaskFlow API v1', () => {
       assignee: alex.body.id,
     });
 
-    expect(byStatus.body.map((task: { name: string }) => task.name)).toEqual(['Payment settlement', 'Invoice copy']);
-    expect(byPriority.body.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
-    expect(byAssignee.body.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
-    expect(combined.body.map((task: { name: string }) => task.name)).toEqual(['Payment settlement']);
+    expect(byStatus.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment settlement', 'Invoice copy']);
+    expect(byPriority.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
+    expect(byAssignee.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
+    expect(combined.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment settlement']);
+    expect(combined.body.pagination.total).toBe(1);
 
     const invalidStatus = await api(app).get(endpoint).set('Authorization', auth).query({ status: 'blocked' });
     const invalidPriority = await api(app).get(endpoint).set('Authorization', auth).query({ priority: 'critical' });
@@ -187,6 +192,37 @@ describe('TaskFlow API v1', () => {
     expect(invalidStatus.status).toBe(400);
     expect(invalidPriority.status).toBe(400);
     expect(invalidAssignee.status).toBe(400);
+  });
+
+  it('paginates after search and filters with validated defaults and limits', async () => {
+    const project = await createProject(app);
+    const endpoint = '/api/v1/tasks';
+    const createTask = (name: string) =>
+      api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, name });
+
+    await createTask('Payment task 1');
+    await createTask('Other task 1');
+    await createTask('Payment task 2');
+    await createTask('Other task 2');
+    await createTask('Payment task 3');
+
+    const defaults = await api(app).get(endpoint).set('Authorization', auth);
+    const secondFilteredPage = await api(app).get(endpoint).set('Authorization', auth).query({
+      search: 'payment',
+      page: 2,
+      size: 2,
+    });
+    const maximumSize = await api(app).get(endpoint).set('Authorization', auth).query({ size: 100 });
+    const invalidPage = await api(app).get(endpoint).set('Authorization', auth).query({ page: 0 });
+    const excessiveSize = await api(app).get(endpoint).set('Authorization', auth).query({ size: 101 });
+
+    expect(defaults.body.pagination).toEqual({ page: 1, size: 20, total: 5, totalPages: 1 });
+    expect(defaults.body.data).toHaveLength(5);
+    expect(secondFilteredPage.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment task 3']);
+    expect(secondFilteredPage.body.pagination).toEqual({ page: 2, size: 2, total: 3, totalPages: 2 });
+    expect(maximumSize.body.pagination.size).toBe(100);
+    expect(invalidPage.status).toBe(400);
+    expect(excessiveSize.status).toBe(400);
   });
 
   it('validates request bodies and rejects unknown fields', async () => {
