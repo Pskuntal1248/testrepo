@@ -36,7 +36,7 @@ export class UserService {
 
   delete(id: string): void {
     this.get(id);
-    if (this.repositories.tasks.findAll().some((task) => task.assigneeId === id)) {
+    if (this.repositories.tasks.query({ assigneeId: id }).length > 0) {
       throw conflict('Cannot delete a user assigned to a task');
     }
     if (this.repositories.comments.findAll().some((comment) => comment.authorId === id)) {

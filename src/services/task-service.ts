@@ -3,17 +3,20 @@ import type { CreateTaskInput, TaskListQuery, UpdateTaskInput } from '../domain/
 import { badRequest, notFound } from '../lib/errors.js';
 import { createId, now } from '../lib/id.js';
 import type { Repositories } from '../repositories/repositories.js';
+import type { TaskQuery } from '../repositories/task-repository.js';
 
 export class TaskService {
   constructor(private readonly repositories: Repositories) {}
 
   list(query: TaskListQuery): TaskListResult {
     const term = query.search?.toLowerCase();
-    const matchingTasks = this.repositories.tasks.findAll().filter((task) =>
-      (term === undefined || task.name.toLowerCase().includes(term) || task.description.toLowerCase().includes(term))
-      && (query.status === undefined || task.status === query.status)
-      && (query.priority === undefined || task.priority === query.priority)
-      && (query.assignee === undefined || task.assigneeId === query.assignee),
+    const structuredQuery: TaskQuery = {};
+    if (query.status !== undefined) structuredQuery.status = query.status;
+    if (query.priority !== undefined) structuredQuery.priority = query.priority;
+    if (query.assignee !== undefined) structuredQuery.assigneeId = query.assignee;
+
+    const matchingTasks = this.repositories.tasks.query(structuredQuery).filter((task) =>
+      term === undefined || task.name.toLowerCase().includes(term) || task.description.toLowerCase().includes(term),
     );
     const total = matchingTasks.length;
     const offset = (query.page - 1) * query.size;

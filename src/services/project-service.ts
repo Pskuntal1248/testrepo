@@ -33,7 +33,7 @@ export class ProjectService {
 
   delete(id: string): void {
     this.get(id);
-    if (this.repositories.tasks.findAll().some((task) => task.projectId === id)) {
+    if (this.repositories.tasks.query({ projectId: id }).length > 0) {
       throw conflict('Cannot delete a project containing tasks');
     }
     this.repositories.projects.delete(id);
