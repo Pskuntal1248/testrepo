@@ -21,6 +21,7 @@ export const createApp = (options: AppOptions = {}): Express => {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '100kb' }));
 
+  app.get('/health', (_request, response) => response.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString(), version: '1.0.0' }));
   app.get('/openapi.json', (_request, response) => response.json(openApiDocument));
   app.get('/docs', (_request, response) => response.type('html').send(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TaskFlow API Docs</title></head>
