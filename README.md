@@ -39,7 +39,7 @@ curl -u admin:taskflow http://localhost:3000/api/v1/tasks
 - Static documentation landing page: `/docs`
 - Detailed examples: [`docs/api.md`](docs/api.md)
 
-Task records use the field **`name`** in v1.0.0 and may include up to 10 normalized labels. Task list responses are plain JSON arrays and support case-insensitive text search plus combinable `status`, `priority`, and `assignee` filters.
+Task records use the field **`name`** in v1.0.0 and may include up to 10 normalized labels. Task listing supports case-insensitive text search plus combinable `status`, `priority`, and `assignee` filters, and returns `{ data, pagination }` with a default page size of 20.
 
 ## Architecture
 
@@ -70,9 +70,9 @@ src/
 
 ## Scope
 
-Included: users, projects, tasks, task labels, task text search and filters, fixed statuses/priorities, assignment validation, comments, Basic auth, validation/errors, and OpenAPI documentation.
+Included: users, projects, tasks, task labels, task text search, filters and pagination, fixed statuses/priorities, assignment validation, comments, Basic auth, validation/errors, and OpenAPI documentation.
 
-Not included in this baseline: health endpoint, persistence, pagination, or templates.
+Not included in this baseline: health endpoint, persistence, or templates.
 
 ## License
 
