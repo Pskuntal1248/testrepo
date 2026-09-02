@@ -1,4 +1,4 @@
-import type { Task } from '../domain/models.js';
+import type { Task, TaskListResult } from '../domain/models.js';
 import type { CreateTaskInput, TaskListQuery, UpdateTaskInput } from '../domain/schemas.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { createId, now } from '../lib/id.js';
@@ -7,15 +7,26 @@ import type { Repositories } from '../repositories/repositories.js';
 export class TaskService {
   constructor(private readonly repositories: Repositories) {}
 
-  list(query: TaskListQuery = {}): Task[] {
+  list(query: TaskListQuery): TaskListResult {
     const term = query.search?.toLowerCase();
-
-    return this.repositories.tasks.findAll().filter((task) =>
+    const matchingTasks = this.repositories.tasks.findAll().filter((task) =>
       (term === undefined || task.name.toLowerCase().includes(term) || task.description.toLowerCase().includes(term))
       && (query.status === undefined || task.status === query.status)
       && (query.priority === undefined || task.priority === query.priority)
       && (query.assignee === undefined || task.assigneeId === query.assignee),
     );
+    const total = matchingTasks.length;
+    const offset = (query.page - 1) * query.size;
+
+    return {
+      data: matchingTasks.slice(offset, offset + query.size),
+      pagination: {
+        page: query.page,
+        size: query.size,
+        total,
+        totalPages: Math.ceil(total / query.size),
+      },
+    };
   }
 
   get(id: string): Task {

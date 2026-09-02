@@ -60,6 +60,8 @@ export const taskListQuerySchema = z.object({
   status: z.enum(TASK_STATUSES).optional(),
   priority: z.enum(TASK_PRIORITIES).optional(),
   assignee: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  size: z.coerce.number().int().min(1).max(100).default(20),
 }).strict();
 
 export const createCommentSchema = z.object({

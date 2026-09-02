@@ -19,11 +19,13 @@ export const openApiDocument = {
     '/users/{id}': itemPaths('Users', 'User'),
     '/projects': collectionPaths('Projects', 'Project'),
     '/projects/{id}': itemPaths('Projects', 'Project'),
-    '/tasks': collectionPaths('Tasks', 'Task', [
+    '/tasks': taskCollectionPaths([
       { $ref: '#/components/parameters/TaskSearch' },
       { $ref: '#/components/parameters/TaskStatusFilter' },
       { $ref: '#/components/parameters/TaskPriorityFilter' },
       { $ref: '#/components/parameters/TaskAssigneeFilter' },
+      { $ref: '#/components/parameters/Page' },
+      { $ref: '#/components/parameters/PageSize' },
     ]),
     '/tasks/{id}': itemPaths('Tasks', 'Task'),
     '/tasks/{taskId}/comments': {
@@ -72,6 +74,20 @@ export const openApiDocument = {
         description: 'Return tasks assigned to this user ID.',
         schema: { type: 'string', format: 'uuid' },
       },
+      Page: {
+        name: 'page',
+        in: 'query',
+        required: false,
+        description: 'One-based result page.',
+        schema: { type: 'integer', minimum: 1, default: 1 },
+      },
+      PageSize: {
+        name: 'size',
+        in: 'query',
+        required: false,
+        description: 'Number of tasks per page.',
+        schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+      },
     },
     schemas: {
       User: entitySchema({ email: { type: 'string', format: 'email' }, displayName: { type: 'string' }, active: { type: 'boolean' } }, ['email', 'displayName', 'active']),
@@ -81,6 +97,15 @@ export const openApiDocument = {
       CreateProject: objectSchema({ name: { type: 'string' }, description: { type: 'string', default: '' } }, ['name']),
       UpdateProject: objectSchema({ name: { type: 'string' }, description: { type: 'string' } }),
       Task: entitySchema(taskProperties(), ['projectId', 'name', 'description', 'status', 'priority', 'assigneeId', 'labels']),
+      TaskPage: objectSchema({
+        data: { type: 'array', items: { $ref: '#/components/schemas/Task' } },
+        pagination: objectSchema({
+          page: { type: 'integer', minimum: 1 },
+          size: { type: 'integer', minimum: 1, maximum: 100 },
+          total: { type: 'integer', minimum: 0 },
+          totalPages: { type: 'integer', minimum: 0 },
+        }, ['page', 'size', 'total', 'totalPages']),
+      }, ['data', 'pagination']),
       CreateTask: objectSchema(taskProperties(true), ['projectId', 'name']),
       UpdateTask: objectSchema(taskProperties()),
       Comment: entitySchema({ taskId: { type: 'string', format: 'uuid' }, authorId: { type: 'string', format: 'uuid' }, body: { type: 'string' } }, ['taskId', 'authorId', 'body']),
@@ -138,6 +163,13 @@ function collectionPaths(tag: string, schema: string, parameters?: unknown[]) {
   return {
     get: operation(tag, `List ${tag.toLowerCase()}`, schema, true, parameters),
     post: operation(tag, `Create ${schema.toLowerCase()}`, schema, false, undefined, `Create${schema}`, 201),
+  };
+}
+
+function taskCollectionPaths(parameters: unknown[]) {
+  return {
+    get: operation('Tasks', 'List tasks', 'TaskPage', false, parameters),
+    post: operation('Tasks', 'Create task', 'Task', false, undefined, 'CreateTask', 201),
   };
 }
 

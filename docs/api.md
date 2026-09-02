@@ -24,7 +24,7 @@ Successful collection reads return plain arrays. Errors use a stable envelope:
 | GET, PATCH, DELETE | `/users/:id` | Read, update, or delete a user |
 | GET, POST | `/projects` | List or create projects |
 | GET, PATCH, DELETE | `/projects/:id` | Read, update, or delete a project |
-| GET, POST | `/tasks` | List or create tasks; GET accepts search and filters |
+| GET, POST | `/tasks` | Paginated task listing or task creation |
 | GET, PATCH, DELETE | `/tasks/:id` | Read, update, or delete a task |
 | GET, POST | `/tasks/:taskId/comments` | List or create comments |
 | GET, PATCH, DELETE | `/tasks/:taskId/comments/:commentId` | Read, update, or delete a comment |
@@ -41,14 +41,30 @@ Successful collection reads return plain arrays. Errors use a stable envelope:
 | `status` | `todo`, `in_progress`, or `done` | Exact status match |
 | `priority` | `low`, `medium`, `high`, or `urgent` | Exact priority match |
 | `assignee` | UUID | Exact match against the task's `assigneeId` |
+| `page` | Integer ≥ 1; default `1` | One-based page number |
+| `size` | Integer from 1–100; default `20` | Tasks per page |
 
-Parameters are combined with AND semantics and results remain a plain JSON array in repository order. For example:
+Search and filters are combined with AND semantics before pagination, and matching tasks retain repository order. For example:
 
 ```bash
-curl -u admin:taskflow 'http://localhost:3000/api/v1/tasks?search=payment&status=done&priority=high&assignee=USER_UUID'
+curl -u admin:taskflow 'http://localhost:3000/api/v1/tasks?search=payment&status=done&priority=high&assignee=USER_UUID&page=1&size=20'
 ```
 
-Omitting every parameter returns all tasks. Valid criteria with no matches return `[]`. Invalid enum values, invalid assignee UUIDs, and unsupported query parameters return a validation error.
+Task listing returns a pagination envelope:
+
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "size": 20,
+    "total": 0,
+    "totalPages": 0
+  }
+}
+```
+
+`total` and `totalPages` describe the complete filtered set, not only the current page. A page beyond the final page returns empty `data` while preserving those totals. Invalid enums, malformed UUIDs, non-positive pages, sizes above 100, and unsupported query parameters return a validation error.
 
 ## Example workflow
 
