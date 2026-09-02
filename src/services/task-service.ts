@@ -1,5 +1,5 @@
 import type { Task } from '../domain/models.js';
-import type { CreateTaskInput, UpdateTaskInput } from '../domain/schemas.js';
+import type { CreateTaskInput, TaskListQuery, UpdateTaskInput } from '../domain/schemas.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { createId, now } from '../lib/id.js';
 import type { Repositories } from '../repositories/repositories.js';
@@ -7,13 +7,14 @@ import type { Repositories } from '../repositories/repositories.js';
 export class TaskService {
   constructor(private readonly repositories: Repositories) {}
 
-  list(search?: string): Task[] {
-    const tasks = this.repositories.tasks.findAll();
-    if (search === undefined) return tasks;
+  list(query: TaskListQuery = {}): Task[] {
+    const term = query.search?.toLowerCase();
 
-    const term = search.toLowerCase();
-    return tasks.filter((task) =>
-      task.name.toLowerCase().includes(term) || task.description.toLowerCase().includes(term),
+    return this.repositories.tasks.findAll().filter((task) =>
+      (term === undefined || task.name.toLowerCase().includes(term) || task.description.toLowerCase().includes(term))
+      && (query.status === undefined || task.status === query.status)
+      && (query.priority === undefined || task.priority === query.priority)
+      && (query.assignee === undefined || task.assigneeId === query.assignee),
     );
   }
 

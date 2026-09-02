@@ -154,6 +154,41 @@ describe('TaskFlow API v1', () => {
     expect(unknownQuery.status).toBe(400);
   });
 
+  it('filters tasks by status, priority, and assignee and combines filters with search', async () => {
+    const project = await createProject(app);
+    const alex = await createUser(app);
+    const blair = await createUser(app, { email: 'blair@example.com', displayName: 'Blair Chen' });
+    const endpoint = '/api/v1/tasks';
+    const createTask = (task: Record<string, unknown>) =>
+      api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, ...task });
+
+    await createTask({ name: 'Payment capture', status: 'todo', priority: 'high', assigneeId: alex.body.id });
+    await createTask({ name: 'Payment settlement', status: 'done', priority: 'high', assigneeId: alex.body.id });
+    await createTask({ name: 'Invoice copy', description: 'Update payment guidance', status: 'done', priority: 'low', assigneeId: blair.body.id });
+
+    const byStatus = await api(app).get(endpoint).set('Authorization', auth).query({ status: 'done' });
+    const byPriority = await api(app).get(endpoint).set('Authorization', auth).query({ priority: 'high' });
+    const byAssignee = await api(app).get(endpoint).set('Authorization', auth).query({ assignee: alex.body.id });
+    const combined = await api(app).get(endpoint).set('Authorization', auth).query({
+      search: 'payment',
+      status: 'done',
+      priority: 'high',
+      assignee: alex.body.id,
+    });
+
+    expect(byStatus.body.map((task: { name: string }) => task.name)).toEqual(['Payment settlement', 'Invoice copy']);
+    expect(byPriority.body.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
+    expect(byAssignee.body.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
+    expect(combined.body.map((task: { name: string }) => task.name)).toEqual(['Payment settlement']);
+
+    const invalidStatus = await api(app).get(endpoint).set('Authorization', auth).query({ status: 'blocked' });
+    const invalidPriority = await api(app).get(endpoint).set('Authorization', auth).query({ priority: 'critical' });
+    const invalidAssignee = await api(app).get(endpoint).set('Authorization', auth).query({ assignee: 'not-a-uuid' });
+    expect(invalidStatus.status).toBe(400);
+    expect(invalidPriority.status).toBe(400);
+    expect(invalidAssignee.status).toBe(400);
+  });
+
   it('validates request bodies and rejects unknown fields', async () => {
     const invalidEmail = await createUser(app, { email: 'not-an-email' });
     const unknownField = await api(app).post('/api/v1/projects').set('Authorization', auth).send({ name: 'A', labels: [] });
