@@ -47,11 +47,14 @@ describe('TaskFlow API v1', () => {
     expect(specification.body.paths['/tasks/{id}']).toBeDefined();
   });
 
-  it('does not expose a health endpoint in the baseline', async () => {
+  it('exposes a public health endpoint returning service health status', async () => {
     const response = await api(app).get('/health');
 
-    expect(response.status).toBe(404);
-    expect(response.body.error.code).toBe('NOT_FOUND');
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ok');
+    expect(response.body.version).toBe('1.0.0');
+    expect(typeof response.body.uptime).toBe('number');
+    expect(typeof response.body.timestamp).toBe('string');
   });
 
   it('supports a complete user, project, task, and comment workflow', async () => {
