@@ -4,7 +4,7 @@
 
 The v1 base path is `/api/v1`. Send `Content-Type: application/json` for request bodies and HTTP Basic credentials on every API request. `/docs` and `/openapi.json` are public.
 
-Successful collection reads return plain arrays. Errors use a stable envelope:
+Successful collection reads return plain arrays, except for `/tasks` which returns a paginated envelope (`{ data, pagination }`). Errors use a stable envelope:
 
 ```json
 {
@@ -31,95 +31,287 @@ Successful collection reads return plain arrays. Errors use a stable envelope:
 | GET | `/statuses` | List `todo`, `in_progress`, and `done` |
 | GET | `/priorities` | List `low`, `medium`, `high`, and `urgent` |
 
-## Task search and filtering
+---
 
-`GET /tasks` supports these optional query parameters:
+## 1. Authentication Examples
 
-| Parameter | Validation | Behavior |
-| --- | --- | --- |
-| `search` | 1–200 characters after trimming | Case-insensitive substring match against `name` or `description` |
-| `status` | `todo`, `in_progress`, or `done` | Exact status match |
-| `priority` | `low`, `medium`, `high`, or `urgent` | Exact priority match |
-| `assignee` | UUID | Exact match against the task's `assigneeId` |
-| `page` | Integer ≥ 1; default `1` | One-based page number |
-| `size` | Integer from 1–100; default `20` | Tasks per page |
+TaskFlow API uses HTTP Basic Authentication. All endpoints under `/api/v1` require authentication.
 
-Search and filters are combined with AND semantics before pagination, and matching tasks retain repository order. For example:
-
+### Successful Request with Basic Auth
 ```bash
-curl -u admin:taskflow 'http://localhost:3000/api/v1/tasks?search=payment&status=done&priority=high&assignee=USER_UUID&page=1&size=20'
+curl -i -u admin:taskflow http://localhost:3000/api/v1/users
+```
+Response `200 OK`:
+```json
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "email": "admin@example.com",
+    "displayName": "Administrator",
+    "active": true,
+    "createdAt": "2026-09-03T12:00:00.000Z",
+    "updatedAt": "2026-09-03T12:00:00.000Z"
+  }
+]
 ```
 
-Task listing returns a pagination envelope:
-
+### Authentication Failure
+Requests with missing or invalid credentials receive a `401 Unauthorized` response:
+```bash
+curl -i http://localhost:3000/api/v1/users
+```
+Response `401 Unauthorized`:
 ```json
 {
-  "data": [],
-  "pagination": {
-    "page": 1,
-    "size": 20,
-    "total": 0,
-    "totalPages": 0
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Missing or invalid authorization header"
   }
 }
 ```
 
-`total` and `totalPages` describe the complete filtered set, not only the current page. A page beyond the final page returns empty `data` while preserving those totals. Invalid enums, malformed UUIDs, non-positive pages, sizes above 100, and unsupported query parameters return a validation error.
+---
 
-## Example workflow
+## 2. Projects Examples
 
-Create a user:
-
+### Create a Project
 ```bash
-curl -u admin:taskflow -X POST http://localhost:3000/api/v1/users \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"alex@example.com","displayName":"Alex Rivera"}'
+curl -X POST http://localhost:3000/api/v1/projects \
+  -u admin:taskflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Mobile App Launch",
+    "description": "Cross-platform mobile application development"
+  }'
 ```
-
-Create a project:
-
-```bash
-curl -u admin:taskflow -X POST http://localhost:3000/api/v1/projects \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Website launch","description":"Coordinate release"}'
-```
-
-Create a task using the returned project and user IDs:
-
-```bash
-curl -u admin:taskflow -X POST http://localhost:3000/api/v1/tasks \
-  -H 'Content-Type: application/json' \
-  -d '{"projectId":"PROJECT_UUID","name":"Publish release notes","priority":"high","assigneeId":"USER_UUID","labels":["Release","API-Docs"]}'
-```
-
-A v1 task response includes `name`:
-
+Response `201 Created`:
 ```json
 {
-  "id": "TASK_UUID",
-  "projectId": "PROJECT_UUID",
-  "name": "Publish release notes",
-  "description": "",
-  "status": "todo",
-  "priority": "high",
-  "assigneeId": "USER_UUID",
-  "labels": ["release", "api-docs"],
+  "id": "p1010000-0000-4000-8000-000000000001",
+  "name": "Mobile App Launch",
+  "description": "Cross-platform mobile application development",
   "createdAt": "2026-09-03T12:00:00.000Z",
   "updatedAt": "2026-09-03T12:00:00.000Z"
 }
 ```
 
-Create a comment:
-
+### List Projects
 ```bash
-curl -u admin:taskflow -X POST http://localhost:3000/api/v1/tasks/TASK_UUID/comments \
-  -H 'Content-Type: application/json' \
-  -d '{"authorId":"USER_UUID","body":"Ready for review."}'
+curl -u admin:taskflow http://localhost:3000/api/v1/projects
+```
+Response `200 OK`:
+```json
+[
+  {
+    "id": "p1010000-0000-4000-8000-000000000001",
+    "name": "Mobile App Launch",
+    "description": "Cross-platform mobile application development",
+    "createdAt": "2026-09-03T12:00:00.000Z",
+    "updatedAt": "2026-09-03T12:00:00.000Z"
+  }
+]
 ```
 
-## Task labels
+### Update a Project
+```bash
+curl -X PATCH http://localhost:3000/api/v1/projects/p1010000-0000-4000-8000-000000000001 \
+  -u admin:taskflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Updated project description for mobile roadmap"
+  }'
+```
+Response `200 OK`:
+```json
+{
+  "id": "p1010000-0000-4000-8000-000000000001",
+  "name": "Mobile App Launch",
+  "description": "Updated project description for mobile roadmap",
+  "createdAt": "2026-09-03T12:00:00.000Z",
+  "updatedAt": "2026-09-03T12:05:00.000Z"
+}
+```
 
-Tasks default to an empty `labels` array. Create and update requests may supply up to 10 labels. Each label is trimmed, normalized to lowercase, and must be 1–30 characters using alphanumeric segments separated by single hyphens, such as `api`, `priority-1`, or `ready-for-review`. Labels must be unique after normalization; sending both `Backend` and `backend` is invalid. Updating `labels` replaces the complete array, and sending `[]` removes all labels.
+### Delete a Project
+```bash
+curl -X DELETE http://localhost:3000/api/v1/projects/p1010000-0000-4000-8000-000000000001 \
+  -u admin:taskflow
+```
+Response `204 No Content`. Note: Projects containing tasks cannot be deleted until all tasks are deleted.
+
+---
+
+## 3. Tasks Examples
+
+### Create a Task
+```bash
+curl -X POST http://localhost:3000/api/v1/tasks \
+  -u admin:taskflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "p1010000-0000-4000-8000-000000000001",
+    "name": "Implement authentication flow",
+    "description": "OAuth2 and Basic authentication integration",
+    "priority": "high",
+    "status": "todo",
+    "assigneeId": "11111111-1111-4111-8111-111111111111",
+    "labels": ["backend", "security"]
+  }'
+```
+Response `201 Created`:
+```json
+{
+  "id": "t2020000-0000-4000-8000-000000000001",
+  "projectId": "p1010000-0000-4000-8000-000000000001",
+  "name": "Implement authentication flow",
+  "description": "OAuth2 and Basic authentication integration",
+  "status": "todo",
+  "priority": "high",
+  "assigneeId": "11111111-1111-4111-8111-111111111111",
+  "labels": ["backend", "security"],
+  "createdAt": "2026-09-03T12:00:00.000Z",
+  "updatedAt": "2026-09-03T12:00:00.000Z"
+}
+```
+
+### Search, Filter, and Paginate Tasks
+`GET /tasks` supports optional filtering and pagination:
+
+```bash
+curl -u admin:taskflow 'http://localhost:3000/api/v1/tasks?search=authentication&status=todo&priority=high&page=1&size=20'
+```
+Response `200 OK`:
+```json
+{
+  "data": [
+    {
+      "id": "t2020000-0000-4000-8000-000000000001",
+      "projectId": "p1010000-0000-4000-8000-000000000001",
+      "name": "Implement authentication flow",
+      "description": "OAuth2 and Basic authentication integration",
+      "status": "todo",
+      "priority": "high",
+      "assigneeId": "11111111-1111-4111-8111-111111111111",
+      "labels": ["backend", "security"],
+      "createdAt": "2026-09-03T12:00:00.000Z",
+      "updatedAt": "2026-09-03T12:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+### Update a Task
+```bash
+curl -X PATCH http://localhost:3000/api/v1/tasks/t2020000-0000-4000-8000-000000000001 \
+  -u admin:taskflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "in_progress",
+    "labels": ["backend", "security", "in-review"]
+  }'
+```
+Response `200 OK`:
+```json
+{
+  "id": "t2020000-0000-4000-8000-000000000001",
+  "projectId": "p1010000-0000-4000-8000-000000000001",
+  "name": "Implement authentication flow",
+  "description": "OAuth2 and Basic authentication integration",
+  "status": "in_progress",
+  "priority": "high",
+  "assigneeId": "11111111-1111-4111-8111-111111111111",
+  "labels": ["backend", "security", "in-review"],
+  "createdAt": "2026-09-03T12:00:00.000Z",
+  "updatedAt": "2026-09-03T12:10:00.000Z"
+}
+```
+
+### Delete a Task
+```bash
+curl -X DELETE http://localhost:3000/api/v1/tasks/t2020000-0000-4000-8000-000000000001 \
+  -u admin:taskflow
+```
+Response `204 No Content`. Deleting a task automatically cascades to delete all its comments.
+
+---
+
+## 4. Comments Examples
+
+### Add a Comment to a Task
+```bash
+curl -X POST http://localhost:3000/api/v1/tasks/t2020000-0000-4000-8000-000000000001/comments \
+  -u admin:taskflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "authorId": "11111111-1111-4111-8111-111111111111",
+    "body": "Authentication middleware is completed, waiting for PR review."
+  }'
+```
+Response `201 Created`:
+```json
+{
+  "id": "c3030000-0000-4000-8000-000000000001",
+  "taskId": "t2020000-0000-4000-8000-000000000001",
+  "authorId": "11111111-1111-4111-8111-111111111111",
+  "body": "Authentication middleware is completed, waiting for PR review.",
+  "createdAt": "2026-09-03T12:15:00.000Z",
+  "updatedAt": "2026-09-03T12:15:00.000Z"
+}
+```
+
+### List Comments for a Task
+```bash
+curl -u admin:taskflow http://localhost:3000/api/v1/tasks/t2020000-0000-4000-8000-000000000001/comments
+```
+Response `200 OK`:
+```json
+[
+  {
+    "id": "c3030000-0000-4000-8000-000000000001",
+    "taskId": "t2020000-0000-4000-8000-000000000001",
+    "authorId": "11111111-1111-4111-8111-111111111111",
+    "body": "Authentication middleware is completed, waiting for PR review.",
+    "createdAt": "2026-09-03T12:15:00.000Z",
+    "updatedAt": "2026-09-03T12:15:00.000Z"
+  }
+]
+```
+
+### Update a Comment
+```bash
+curl -X PATCH http://localhost:3000/api/v1/tasks/t2020000-0000-4000-8000-000000000001/comments/c3030000-0000-4000-8000-000000000001 \
+  -u admin:taskflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "body": "PR approved and merged."
+  }'
+```
+Response `200 OK`:
+```json
+{
+  "id": "c3030000-0000-4000-8000-000000000001",
+  "taskId": "t2020000-0000-4000-8000-000000000001",
+  "authorId": "11111111-1111-4111-8111-111111111111",
+  "body": "PR approved and merged.",
+  "createdAt": "2026-09-03T12:15:00.000Z",
+  "updatedAt": "2026-09-03T12:20:00.000Z"
+}
+```
+
+### Delete a Comment
+```bash
+curl -X DELETE http://localhost:3000/api/v1/tasks/t2020000-0000-4000-8000-000000000001/comments/c3030000-0000-4000-8000-000000000001 \
+  -u admin:taskflow
+```
+Response `204 No Content`.
+
+---
 
 ## Relationship rules
 
