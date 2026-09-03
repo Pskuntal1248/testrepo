@@ -72,7 +72,7 @@ export class TaskService {
   private validateAssignee(assigneeId: string | null): void {
     if (assigneeId === null) return;
     const user = this.repositories.users.findById(assigneeId);
-    if (!user || !user.active || user.displayName.trim().length === 0) {
+    if (!user || !user.active) {
       throw badRequest('assigneeId must reference an active user');
     }
   }
