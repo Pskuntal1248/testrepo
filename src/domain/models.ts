@@ -24,7 +24,7 @@ export interface Project {
 export interface Task {
   id: string;
   projectId: string;
-  name: string;
+  title: string;
   description: string;
   status: TaskStatus;
   priority: TaskPriority;

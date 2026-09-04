@@ -17,7 +17,7 @@ export class TaskService {
     if (query.assignee !== undefined) structuredQuery.assigneeId = query.assignee;
 
     const matchingTasks = this.repositories.tasks.query(structuredQuery).filter((task) =>
-      term === undefined || task.name.toLowerCase().includes(term) || task.description.toLowerCase().includes(term),
+      term === undefined || task.title.toLowerCase().includes(term) || task.description.toLowerCase().includes(term),
     );
     const total = matchingTasks.length;
     const offset = (query.page - 1) * query.size;

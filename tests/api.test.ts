@@ -62,7 +62,7 @@ describe('TaskFlow API v1', () => {
     const project = await createProject(app);
     const task = await api(app).post('/api/v1/tasks').set('Authorization', auth).send({
       projectId: project.body.id,
-      name: 'Publish release notes',
+      title: 'Publish release notes',
       priority: 'high',
       assigneeId: user.body.id,
       labels: ['Release', 'API-Docs'],
@@ -73,17 +73,18 @@ describe('TaskFlow API v1', () => {
     expect(task.status).toBe(201);
     expect(task.body).toMatchObject({
       projectId: project.body.id,
-      name: 'Publish release notes',
+      title: 'Publish release notes',
       status: 'todo',
       priority: 'high',
       assigneeId: user.body.id,
       labels: ['release', 'api-docs'],
     });
-    expect(task.body).not.toHaveProperty('title');
+    expect(task.body).toHaveProperty('title');
+    expect(task.body).not.toHaveProperty('name');
 
     const fetched = await api(app).get(`/api/v1/tasks/${task.body.id}`).set('Authorization', auth);
     const listed = await api(app).get('/api/v1/tasks').set('Authorization', auth);
-    expect(fetched.body.name).toBe('Publish release notes');
+    expect(fetched.body.title).toBe('Publish release notes');
     expect(listed.body.data).toHaveLength(1);
     expect(listed.body.pagination).toEqual({ page: 1, size: 20, total: 1, totalPages: 1 });
 
@@ -106,7 +107,7 @@ describe('TaskFlow API v1', () => {
   it('defaults labels and validates normalized label uniqueness, syntax, and count', async () => {
     const project = await createProject(app);
     const endpoint = '/api/v1/tasks';
-    const baseTask = { projectId: project.body.id, name: 'Label validation' };
+    const baseTask = { projectId: project.body.id, title: 'Label validation' };
 
     const withoutLabels = await api(app).post(endpoint).set('Authorization', auth).send(baseTask);
     const duplicateLabels = await api(app).post(endpoint).set('Authorization', auth).send({
@@ -129,11 +130,11 @@ describe('TaskFlow API v1', () => {
     expect(tooManyLabels.status).toBe(400);
   });
 
-  it('searches task names and descriptions with a validated case-insensitive substring', async () => {
+  it('searches task titles and descriptions with a validated case-insensitive substring', async () => {
     const project = await createProject(app);
     const endpoint = '/api/v1/tasks';
-    const createTask = (name: string, description: string) =>
-      api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, name, description });
+    const createTask = (title: string, description: string) =>
+      api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, title, description });
 
     await createTask('Payment retry logic', 'Handle transient failures');
     await createTask('Audit webhooks', 'Investigate PAYMENT provider callbacks');
@@ -148,7 +149,7 @@ describe('TaskFlow API v1', () => {
     const unknownQuery = await api(app).get(endpoint).set('Authorization', auth).query({ sort: 'name' });
 
     expect(matches.status).toBe(200);
-    expect(matches.body.data.map((task: { name: string }) => task.name)).toEqual([
+    expect(matches.body.data.map((task: { title: string }) => task.title)).toEqual([
       'Payment retry logic',
       'Audit webhooks',
     ]);
@@ -169,9 +170,9 @@ describe('TaskFlow API v1', () => {
     const createTask = (task: Record<string, unknown>) =>
       api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, ...task });
 
-    await createTask({ name: 'Payment capture', status: 'todo', priority: 'high', assigneeId: alex.body.id });
-    await createTask({ name: 'Payment settlement', status: 'done', priority: 'high', assigneeId: alex.body.id });
-    await createTask({ name: 'Invoice copy', description: 'Update payment guidance', status: 'done', priority: 'low', assigneeId: blair.body.id });
+    await createTask({ title: 'Payment capture', status: 'todo', priority: 'high', assigneeId: alex.body.id });
+    await createTask({ title: 'Payment settlement', status: 'done', priority: 'high', assigneeId: alex.body.id });
+    await createTask({ title: 'Invoice copy', description: 'Update payment guidance', status: 'done', priority: 'low', assigneeId: blair.body.id });
 
     const byStatus = await api(app).get(endpoint).set('Authorization', auth).query({ status: 'done' });
     const byPriority = await api(app).get(endpoint).set('Authorization', auth).query({ priority: 'high' });
@@ -183,10 +184,10 @@ describe('TaskFlow API v1', () => {
       assignee: alex.body.id,
     });
 
-    expect(byStatus.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment settlement', 'Invoice copy']);
-    expect(byPriority.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
-    expect(byAssignee.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment capture', 'Payment settlement']);
-    expect(combined.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment settlement']);
+    expect(byStatus.body.data.map((task: { title: string }) => task.title)).toEqual(['Payment settlement', 'Invoice copy']);
+    expect(byPriority.body.data.map((task: { title: string }) => task.title)).toEqual(['Payment capture', 'Payment settlement']);
+    expect(byAssignee.body.data.map((task: { title: string }) => task.title)).toEqual(['Payment capture', 'Payment settlement']);
+    expect(combined.body.data.map((task: { title: string }) => task.title)).toEqual(['Payment settlement']);
     expect(combined.body.pagination.total).toBe(1);
 
     const invalidStatus = await api(app).get(endpoint).set('Authorization', auth).query({ status: 'blocked' });
@@ -200,8 +201,8 @@ describe('TaskFlow API v1', () => {
   it('paginates after search and filters with validated defaults and limits', async () => {
     const project = await createProject(app);
     const endpoint = '/api/v1/tasks';
-    const createTask = (name: string) =>
-      api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, name });
+    const createTask = (title: string) =>
+      api(app).post(endpoint).set('Authorization', auth).send({ projectId: project.body.id, title });
 
     await createTask('Payment task 1');
     await createTask('Other task 1');
@@ -221,7 +222,7 @@ describe('TaskFlow API v1', () => {
 
     expect(defaults.body.pagination).toEqual({ page: 1, size: 20, total: 5, totalPages: 1 });
     expect(defaults.body.data).toHaveLength(5);
-    expect(secondFilteredPage.body.data.map((task: { name: string }) => task.name)).toEqual(['Payment task 3']);
+    expect(secondFilteredPage.body.data.map((task: { title: string }) => task.title)).toEqual(['Payment task 3']);
     expect(secondFilteredPage.body.pagination).toEqual({ page: 2, size: 2, total: 3, totalPages: 2 });
     expect(maximumSize.body.pagination.size).toBe(100);
     expect(invalidPage.status).toBe(400);
@@ -251,11 +252,11 @@ describe('TaskFlow API v1', () => {
 
     const badProject = await api(app).post('/api/v1/tasks').set('Authorization', auth).send({
       projectId: missingProject,
-      name: 'Invalid project',
+      title: 'Invalid project',
     });
     const badAssignee = await api(app).post('/api/v1/tasks').set('Authorization', auth).send({
       projectId: project.body.id,
-      name: 'Invalid assignment',
+      title: 'Invalid assignment',
       assigneeId: inactiveUser.body.id,
     });
 
@@ -286,7 +287,7 @@ describe('TaskFlow API v1', () => {
     const project = await createProject(app);
     await api(app).post('/api/v1/tasks').set('Authorization', auth).send({
       projectId: project.body.id,
-      name: 'Referenced task',
+      title: 'Referenced task',
       assigneeId: user.body.id,
     });
 

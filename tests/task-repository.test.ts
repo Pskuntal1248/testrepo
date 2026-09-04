@@ -5,7 +5,7 @@ import { TaskRepository } from '../src/repositories/task-repository.js';
 const makeTask = (id: string, overrides: Partial<Task> = {}): Task => ({
   id,
   projectId: 'project-1',
-  name: `Task ${id}`,
+  title: `Task ${id}`,
   description: '',
   status: 'todo',
   priority: 'medium',

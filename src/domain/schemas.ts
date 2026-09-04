@@ -42,7 +42,7 @@ const taskLabelsSchema = z.array(taskLabelSchema)
 
 export const createTaskSchema = z.object({
   projectId: z.string().uuid(),
-  name: z.string().trim().min(1).max(200),
+  title: z.string().trim().min(1).max(200),
   description: z.string().max(5000).default(''),
   status: z.enum(TASK_STATUSES).default('todo'),
   priority: z.enum(TASK_PRIORITIES).default('medium'),
